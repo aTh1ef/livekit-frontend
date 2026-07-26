@@ -19,15 +19,19 @@ pnpm install && pnpm dev
 
 The agent must be running separately for a call to connect.
 
-## Before deploying
+## The token route
 
-`app/api/token/route.ts` throws `THIS API ROUTE IS INSECURE` unless `NODE_ENV === 'development'` or
-`IS_VERCEL_PREVIEW === 'true'`. As shipped it mints a 15 minute room token to anyone who POSTs, with
-no auth.
+Upstream, `app/api/token/route.ts` throws `THIS API ROUTE IS INSECURE` on any request where
+`NODE_ENV !== 'development'`, outside the try/catch. On Vercel that means every production request
+returns a bodyless 500 and the app cannot connect at all.
 
-- **Short-lived demo:** set `IS_VERCEL_PREVIEW=true` in Vercel. Anyone with the URL can then drain
-  your 1,000 free agent minutes.
-- **Anything real:** add an auth check to the `POST` handler and remove the guard.
+Replaced here with a same-origin check: requests whose `Origin` header does not match the host get
+a 403, everything else proceeds. Browsers always send `Origin` on POST, so the real app works while
+drive-by bots and plain `curl` do not.
+
+**This is a speed bump, not authentication.** `Origin` is trivially forged. Anyone who bothers can
+still mint 15 minute room tokens and drain the 1,000 free agent minutes. Before this endpoint backs
+anything that matters, add a real auth check to the `POST` handler.
 
 ## Windows note
 
