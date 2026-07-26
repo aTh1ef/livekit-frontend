@@ -17,12 +17,23 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL;
 // don't cache the results
 export const revalidate = 0;
 
+// Demo-grade speed bump, NOT authentication. Browsers always send Origin on
+// POST, so this blocks drive-by bots and curl, but anyone can forge the header.
+// Replace with real auth before this endpoint handles anything that matters.
+function isSameOrigin(req: Request): boolean {
+  const origin = req.headers.get('origin');
+  const host = req.headers.get('host');
+  if (!origin || !host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
-  // make an exception for the vercel preview environment
-  if (process.env.NODE_ENV !== 'development' && process.env.IS_VERCEL_PREVIEW !== 'true') {
-    throw new Error(
-      'THIS API ROUTE IS INSECURE. DO NOT USE THIS ROUTE IN PRODUCTION WITHOUT AN AUTHENTICATION LAYER.'
-    );
+  if (process.env.NODE_ENV !== 'development' && !isSameOrigin(req)) {
+    return new NextResponse('Forbidden', { status: 403 });
   }
 
   try {
